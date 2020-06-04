@@ -1,0 +1,4 @@
+- Para instalar o expo: npm install -g expo-cli
+- para inicializar o projeto (como admin)
+		-> Set-ExecutionPolicy RemoteSigned
+		-> expo init <nome_do projeto>
