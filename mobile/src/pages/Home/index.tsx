@@ -1,15 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ImageBackground, Image, StyleSheet, Text, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import { Feather as Icon } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import RNPickerSelect from 'react-native-picker-select';
+import axios from 'axios';
 
 //reacrtive-native-picker-select
+
+interface Item {
+  value: string,
+  label: string
+}
+
+interface Uf {
+  id: number,
+  sigla: string,
+  nome: string
+}
+
+interface City {
+  id: number,
+  nome: string
+}
 
 const Home = () => {
 
   const [uf, setUf] = useState('');
   const [city, setCity] = useState('');
+  const [ufs, setUfs] = useState<Item[]>([]);
+  const [cities, setCities] = useState<Item[]>([]);
 
   const navigation = useNavigation();
 
@@ -19,6 +39,18 @@ const Home = () => {
       uf
     });
   }
+
+  useEffect(() => {
+    axios.get("https://servicodados.ibge.gov.br/api/v1/localidades/estados").then(response => {
+      const respData = response.data as Uf[];
+      const items = new Array<Item>();
+      respData.map(dt => items.push({
+        value: dt.sigla,
+        label: dt.nome
+      }))
+      setUfs(items);
+    })
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -42,21 +74,51 @@ const Home = () => {
         </View>
 
         <View style={styles.footer}>
-          <TextInput
-            style={styles.input}
-            placeholder='Digite a UF'
-            value={uf}
-            maxLength={2}
-            autoCapitalize='characters'
-            autoCorrect={false}
-            onChangeText={setUf}
+
+          <RNPickerSelect
+            style={{ ...pickerSelectStyles }}
+
+            placeholder={{
+              label: 'Selecione um estado...',
+              value: null,
+            }}
+
+            items={ufs}
+
+            onValueChange={value => {
+              const uf = value;
+              axios.get(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/distritos`).then(response => {
+                const respData = response.data as City[];
+                const items = new Array<Item>();
+                respData.map(dt => items.push({
+                  value: dt.nome,
+                  label: dt.nome
+                }))
+                setCities(items);
+              })
+              setUf(uf);
+            }}
           />
-          <TextInput
-            style={styles.input}
-            placeholder='Digite a Cidade'
-            value={city}
-            autoCorrect={false}
-            onChangeText={setCity}
+
+          <RNPickerSelect
+            style={{ ...pickerSelectStyles }}
+
+            placeholder={{
+              label: 'Selecione uma Cidade...',
+              value: null,
+            }}
+
+            items={cities ? cities : [{
+              label: 'Selecione uma UF',
+              value: '0'
+            }]}
+
+            onValueChange={value => {
+              const city = value;
+              setCity(city);
+            }}
+
+
           />
           <RectButton style={styles.button} onPress={hadleNavigateToPoints}>
             <View style={styles.buttonIcon}>
@@ -73,6 +135,33 @@ const Home = () => {
     </KeyboardAvoidingView>
   );
 };
+
+
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    fontSize: 16,
+    paddingTop: 13,
+    paddingHorizontal: 10,
+    paddingBottom: 12,
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 4,
+    backgroundColor: 'white',
+    color: 'black',
+  },
+  inputAndroid: {
+    fontSize: 25,
+    paddingTop: 13,
+    paddingHorizontal: 10,
+    paddingBottom: 25,
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 4,
+    backgroundColor: 'white',
+    color: 'black',
+    marginBottom: 10
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -107,6 +196,15 @@ const styles = StyleSheet.create({
   select: {},
 
   input: {
+    height: 60,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    marginBottom: 8,
+    paddingHorizontal: 24,
+    fontSize: 16,
+  },
+
+  inputSelect: {
     height: 60,
     backgroundColor: '#FFF',
     borderRadius: 10,
